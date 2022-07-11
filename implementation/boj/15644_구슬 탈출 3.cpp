@@ -5,6 +5,7 @@ const int dx[4] = {1,-1,0,0};
 const int SUCCESS = 1;
 const int FAIL = -1;
 const int NOTEND = 0;
+const int BOARD_SERIAL_SIZE = 10000;
 const char dirChar[4] = {'R','L','D','U'};
 
 /*
@@ -29,7 +30,9 @@ struct Marble{
     void moveBackward(int dir){
         y-=dy[dir];x-=dx[dir];
     }
-    
+    int getPosSerial(int c){
+        return c*y+x;
+    }
 };
 
 struct Board{
@@ -66,6 +69,7 @@ struct Board{
         while(checkGo(temp) and !temp.checkCollide(red)) temp.moveForward(dir);
         return temp.checkCollide(red);
     }
+    
     void moveMarble(Marble& theMarble,Marble& other,int dir){
         while(checkGo(theMarble) and (!other.exist or !theMarble.checkCollide(other))) theMarble.moveForward(dir);
         if(checkHole(theMarble)){
@@ -83,7 +87,11 @@ struct Board{
             moveMarble(red,blue,dir);
         }
     }
-    
+    int getBoardSerial(){
+        int redSerial = red.getPosSerial(c);
+        int blueSerial = blue.getPosSerial(c);
+        return redSerial*r*c+blueSerial;
+    }
     int checkStatus(){
         if(!blue.exist) return FAIL;
         if(!red.exist) return SUCCESS;
@@ -95,11 +103,14 @@ struct Search{
     int best;
     string bestSequence,theSequence;
     Board theBoard;
+    int dist[BOARD_SERIAL_SIZE];
     Search(Board _theBoard) : theBoard(_theBoard){
         best = 1e9;
+        fill(dist,dist+BOARD_SERIAL_SIZE,1e9);
     }
     void dfs(int depth){
         if(depth>10 or depth>=best) return;
+        dist[theBoard.getBoardSerial()] = depth;
         if(theBoard.checkStatus()==SUCCESS){
             best = min(best,depth);
             bestSequence = theSequence;
@@ -108,9 +119,9 @@ struct Search{
             Marble red = theBoard.red,blue = theBoard.blue;
             theBoard.tilt(dir);
             theSequence+=dirChar[dir];
-            if(theBoard.checkStatus()!=FAIL){
+            if(theBoard.checkStatus()!=FAIL and depth+1<dist[theBoard.getBoardSerial()]){
                 dfs(depth+1);
-            } 
+            }
             theSequence.pop_back();
             theBoard.resetMarble(red,blue);
         }
@@ -133,6 +144,8 @@ void run(){
     dfsSearch.dfs(0);
     dfsSearch.printBest();
 }
+
+
 
 int main(){
     ios_base::sync_with_stdio(false);
